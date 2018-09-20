@@ -7,6 +7,8 @@ import (
 	"log"
 	"github.com/digitalocean/go-libvirt"
 	"net/http"
+	"github.com/rakyll/statik/fs"
+	_ "me/bazhenov/home-virt/statik"
 	//"encoding/json"
 	//"os"
 )
@@ -18,7 +20,9 @@ type Domain struct {
 }
 
 func main() {
-	initLibVirt();
+	//initLibVirt();
+	srv := initHttpServer()
+	srv.ListenAndServe()
 }
 
 func handleApiCall(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +31,15 @@ func handleApiCall(w http.ResponseWriter, r *http.Request) {
 
 func initHttpServer() http.Server {
 	handler := http.NewServeMux()
+
+	statikFS, err := fs.New()
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  handler.Handle("/", http.FileServer(statikFS))
 	handler.HandleFunc("/api", handleApiCall)
+
 	return http.Server {
 		Addr: ":8080",
 		Handler: handler,
