@@ -12,11 +12,11 @@ export class App extends React.Component {
   }
 
   vmStart(vm) {
-    return reqwest({url: "/api/vm/start", method: "POST", data: {uuid: vm.UUID}})
+    return reqwest({url: "/api/vm/start", method: "POST",contentType: 'application/json', data: JSON.stringify(vm)})
   }
 
   vmStop(vm) {
-    return reqwest({url: "/api/vm/stop", method: "POST", data: {uuid: vm.UUID}})
+    return reqwest({url: "/api/vm/stop", method: "POST", contentType: 'application/json', data: JSON.stringify(vm)})
   }
 
   vmList() {
