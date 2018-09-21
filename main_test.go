@@ -17,4 +17,14 @@ func TestJsonEncoding(t *testing.T) {
 	if string(bytes) != `{"name":"windows-hell","uuid":"b61a670f53bb47e8abfcfa6645666d96","is_running":false}` {
 		t.Errorf("%v", string(bytes))
 	}
+
+	var vmCopy Vm
+	e := json.Unmarshal(bytes, &vmCopy)
+	if e != nil {
+		t.Errorf("%s", e.Error())
+	}
+	if vm != vmCopy {
+		t.Errorf("%x", vmCopy.Uuid)
+		t.Errorf("JSON deserialization failed")
+	}
 }

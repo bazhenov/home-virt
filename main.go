@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"github.com/rakyll/statik/fs"
 	"encoding/json"
+	"encoding/hex"
 	_ "me/bazhenov/home-virt/statik"
 )
 
@@ -22,6 +23,15 @@ type Vm struct {
 
 func (uuid UUID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(fmt.Sprintf("%x", uuid))
+}
+
+func (uuid *UUID) UnmarshalJSON(text []byte) error {
+	text = text[1:len(text)-1]
+	nums, e := hex.DecodeString(string(text))
+	for i := 0; i < 16; i++ {
+		uuid[i] = nums[i]
+	}
+	return e
 }
 
 func VmFromDomain(domain libvirt.Domain) Vm {
@@ -54,6 +64,51 @@ func handleVmList(lv *libvirt.Libvirt) func(http.ResponseWriter, *http.Request) 
 	}
 }
 
+func ReadDomainFromRequest(lv *libvirt.Libvirt, w http.ResponseWriter, r *http.Request) (libvirt.Domain, error) {
+	var vm Vm
+	decoder := json.NewDecoder(r.Body)
+	e := decoder.Decode(&vm)
+	if  e != nil {
+		WriteHttpError(w, 400, e)
+		return libvirt.Domain{}, e
+	}
+	domain, e := lv.DomainLookupByUUID(libvirt.UUID(vm.Uuid))
+	if e != nil {
+		WriteHttpError(w, 500, e)
+		return libvirt.Domain{}, e
+	}
+	return domain, nil
+}
+
+func handleVmStop(lv *libvirt.Libvirt) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		domain, e := ReadDomainFromRequest(lv, w, r)
+		e = lv.DomainDestroy(domain)
+		if e != nil {
+			WriteHttpError(w, 500, e)
+			return
+		}
+		w.Write([]byte(domain.Name))
+	}
+}
+
+func handleVmStart(lv *libvirt.Libvirt) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		domain, e := ReadDomainFromRequest(lv, w, r)
+		e = lv.DomainCreate(domain)
+		if e != nil {
+			WriteHttpError(w, 500, e)
+			return
+		}
+		w.Write([]byte(domain.Name))
+	}
+}
+
+func WriteHttpError(w http.ResponseWriter, code int, e error) {
+	w.WriteHeader(code)
+	w.Write([]byte(e.Error()))
+}
+
 func initHttpServer(lv *libvirt.Libvirt) http.Server {
 	handler := http.NewServeMux()
 
@@ -64,6 +119,8 @@ func initHttpServer(lv *libvirt.Libvirt) http.Server {
 
   handler.Handle("/", http.FileServer(statikFS))
 	handler.HandleFunc("/api/vm/list", handleVmList(lv))
+	handler.HandleFunc("/api/vm/start", handleVmStart(lv))
+	handler.HandleFunc("/api/vm/stop", handleVmStop(lv))
 
 	return http.Server {
 		Addr: ":8080",
