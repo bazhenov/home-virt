@@ -140,13 +140,5 @@ func initLibVirt() *libvirt.Libvirt {
 		log.Fatalf("Unable to connect to libvirt: %v", err)
 	}
 
-	domains, err := l.Domains()
-	if err != nil {
-		log.Fatalf("Unable to list domains: %v", err)
-	}
-
-	for _, d := range domains {
-		fmt.Printf("%3d. %s %x\n", d.ID, d.Name, d.UUID)
-	}
 	return l
 }
