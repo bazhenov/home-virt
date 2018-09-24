@@ -6,12 +6,13 @@ export class App extends React.Component {
   render() {
     return (
       <VmList
-        vms={[{ id: 0, name: "Vm 1" }, { id: 1, name: "Vm 2" }]}
-        onVmRun={this.vmStart}/>
+				vmLoader={() => this.vmList()}
+				onVmRun={(vm) => this.vmRun(vm)}
+				onVmStop={(vm) => this.vmStop(vm)} />
     );
   }
 
-  vmStart(vm) {
+  vmRun(vm) {
     return reqwest({url: "/api/vm/start", method: "POST",contentType: 'application/json', data: JSON.stringify(vm)})
   }
 
@@ -20,6 +21,6 @@ export class App extends React.Component {
   }
 
   vmList() {
-    return reqwest({url: "/api/vm/list", method: "GET"})
+    return reqwest({url: "/api/vm/list", method: "GET", type: "json"})
   }
 }
